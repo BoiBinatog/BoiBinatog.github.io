@@ -174,7 +174,7 @@
       capturedImages = [];
       clearSlots();
       for (let i = 0; i < 4; i++) {
-        await showCountdown(0.1); 
+        await showCountdown(5); 
         let imgUrl = takePhoto();
         capturedImages.push(imgUrl);
         document.getElementById(`slot${i+1}`).src = imgUrl;
@@ -217,7 +217,7 @@
   frame.src = "2x6.png";
 
   frame.onload = () => {
-    let totalLoads = capturedImages.length * 2; // 2 strips side by side
+    let totalLoads = capturedImages.length * 2; 
     let loaded = 0;
 
     for (let s = 0; s < 2; s++) { 
@@ -266,3 +266,4 @@ function printStrip() {
   </script>
 </body>
 </html>
+
