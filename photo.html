@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photobooth</title>
+  <style>
+  body {
+    margin: 0;
+    background: #2c2e46;
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .photobooth {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+
+  video, canvas {
+    width: 700px;
+    height: 500px;
+    background: black;
+    border-radius: 25px;
+    object-fit: cover;
+    position: relative;
+    transform: scaleX(-1);
+  }
+
+  #countdown {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 150px;
+    color: white;
+    font-weight: bold;
+    text-shadow: 3px 3px 8px black;
+    display: none;
+    z-index: 10;
+  }
+
+  .strip-container {
+    position: relative;
+    width: 250px;   
+    height: 600px;
+  }
+
+  .strip-frame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 112%;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .photos {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .photos img {
+    position: absolute;
+    left: 18.8px;         
+    width: 210px;       
+    height: 132px;      
+    object-fit: cover;
+    border-radius: 2px;
+    background: #111;
+    z-index: 10;
+  }
+
+  #slot1 { top: 17px; }   
+  #slot2 { top: 159px; }
+  #slot3 { top: 302px; }
+  #slot4 { top: 444px; }
+
+  .controls {
+    margin-top: 1px;
+    margin-right: 220px;
+    display: flex;
+    gap: 20px;
+  }
+
+  .controls button {
+    padding: 10px 35px;
+    border: none;
+    border-radius: 30px;
+    font-size: 18px;
+    cursor: pointer;
+    color: white;
+    font-family: "Brush Script MT", cursive; /* font change */ 
+  }
+  /*Button colors*/
+  .start { 
+    background: #70c5d3;
+  }
+  .print { 
+    background: #357388; 
+  }
+  .restart { 
+    background: #d62828; 
+  }
+  
+  </style>
+</head>
+<body>
+ 
+  <div class="photobooth">
+    <div class="preview" style="position:relative;">
+      <video id="video" autoplay></video>
+      <canvas id="canvas" width="700" height="500" hidden></canvas>
+      <div id="countdown"></div>
+    </div>
+    
+    
+    <div class="strip-container">
+        <div class="photos" id="photo-strip">
+          <img id="slot1" alt="Photo 1">
+          <img id="slot2" alt="Photo 2">
+          <img id="slot3" alt="Photo 3">
+          <img id="slot4" alt="Photo 4">
+        </div>
+        <img src="2x6.png" alt="Photo Frame" class="strip-frame"> 
+      </div>
+  </div>
+
+  <div class="controls">
+    <button class="start" onclick="startCapture()">Start</button>
+    <button class="print" onclick="printStrip()">Save</button>
+    <button class="restart" onclick="restartStrip()">Restart</button>
+  </div>
+
+  
+  <canvas id="finalCanvas" width="1200" height="1800" hidden></canvas>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const finalCanvas = document.getElementById('finalCanvas');
+    const fctx = finalCanvas.getContext('2d');
+    const countdown = document.getElementById('countdown');
+
+    let capturedImages = [];
+
+   
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => video.srcObject = stream)
+      .catch(err => console.error("Camera error:", err));
+
+    function takePhoto() {
+      ctx.save();
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.restore();
+
+      return canvas.toDataURL("image/png");
+    }
+
+    async function startCapture() {
+      capturedImages = [];
+      clearSlots();
+      for (let i = 0; i < 4; i++) {
+        await showCountdown(0.1); 
+        let imgUrl = takePhoto();
+        capturedImages.push(imgUrl);
+        document.getElementById(`slot${i+1}`).src = imgUrl;
+      }
+    }
+
+    function showCountdown(seconds) {
+      return new Promise(resolve => {
+        let counter = seconds;
+        countdown.style.display = "block";
+        countdown.textContent = counter;
+
+        let interval = setInterval(() => {
+          counter--;
+          if (counter > 0) {
+            countdown.textContent = counter;
+          } else {
+            clearInterval(interval);
+            countdown.style.display = "none";
+            resolve();
+          }
+        }, 1000);
+      });
+    }
+
+    function clearSlots() {
+      for (let i = 1; i <= 4; i++) {
+        document.getElementById(`slot${i}`).src = "";
+      }
+    }
+
+    function buildFinalStrip(callback) {
+  const stripWidth = 600;
+  const stripHeight = 1800;
+
+  fctx.fillStyle = "white";
+  fctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+
+  let frame = new Image();
+  frame.src = "2x6.png";
+
+  frame.onload = () => {
+    let totalLoads = capturedImages.length * 2; // 2 strips side by side
+    let loaded = 0;
+
+    for (let s = 0; s < 2; s++) { 
+      let xOffset = s * stripWidth;
+      fctx.drawImage(frame, xOffset, 0, stripWidth, stripHeight);
+
+      capturedImages.forEach((src, i) => {
+        let img = new Image();
+        img.src = src;
+        img.onload = () => {
+          let photoW = 502;
+          let photoH = 351.5;
+          let spacing = 30;
+          let yOffset = 47 + i * (photoH + spacing);
+          fctx.drawImage(img, xOffset + 46, yOffset, photoW, photoH);
+
+          loaded++;
+          if (loaded === totalLoads) {
+            callback(); 
+          }
+        };
+      });
+    }
+
+
+    fctx.fillStyle = "#888";
+    fctx.fillRect(stripWidth - 1, 0, 2, stripHeight);
+  };
+}
+
+function printStrip() {
+  buildFinalStrip(() => {
+    let dataUrl = finalCanvas.toDataURL("image/png");
+    let link = document.createElement("a");
+    link.download = "photobooth_strip.png";
+    link.href = dataUrl;
+    link.click();
+  });
+}
+
+
+    function restartStrip() {
+      capturedImages = [];
+      clearSlots();
+    }
+  </script>
+</body>
+</html>
