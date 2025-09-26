@@ -84,7 +84,7 @@
     left: 18.8px;         
     width: 210px;       
     height: 132px;      
-    object-fit: fill;
+    object-fit: cover;
     border-radius: 2px;
     background: #111;
     z-index: 2;
@@ -154,50 +154,69 @@
   
   <canvas id="finalCanvas" width="1200" height="1800" hidden></canvas>
 
-  <script>
+<script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const finalCanvas = document.getElementById('finalCanvas');
     const fctx = finalCanvas.getContext('2d');
     const countdown = document.getElementById('countdown');
-
+  
     let capturedImages = [];
-
-   
-    // ✅ Force DSLR capture (3:2 ratio, ~6000x4000)
+  
+    // aspect ratio
     navigator.mediaDevices.getUserMedia({
       video: {
-        width: { ideal: 6000 }, 
-        height: { ideal: 4000 },
-        aspectRatio: 3/2
+        width: { ideal: 4096 }, 
+        height: { ideal: 2160 }
       }
     })
     .then(stream => {
       video.srcObject = stream;
       video.onloadedmetadata = () => {
-        console.log("DSLR Resolution:", video.videoWidth, "x", video.videoHeight);
+        console.log("Camera Resolution:", video.videoWidth, "x", video.videoHeight);
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
       };
     })
     .catch(err => console.error("Camera error:", err));
-
+  
     function takePhoto() {
       ctx.save();
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
-
-      const frameRatio = 3/2;
-      let srcX = 0, srcY = 0, srcW = video.videoWidth, srcH = video.videoHeight;
-      const videoRatio = video.videoWidth / video.videoHeight;
-
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  
+      // Crop logic 
+      let frameW = canvas.width;
+      let frameH = canvas.height;
+      let frameRatio = frameW / frameH;
+  
+      let srcW = video.videoWidth;
+      let srcH = video.videoHeight;
+      let srcRatio = srcW / srcH;
+  
+      let sx, sy, sWidth, sHeight;
+  
+      if (srcRatio > frameRatio) {
+        
+        sHeight = srcH;
+        sWidth = sHeight * frameRatio;
+        sx = (srcW - sWidth) / 2;
+        sy = 0;
+      } else {
+        
+        sWidth = srcW;
+        sHeight = sWidth / frameRatio;
+        sx = 0;
+        sy = (srcH - sHeight) / 2;
+      }
+  
+      ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, frameW, frameH);
       ctx.restore();
-
+  
       return canvas.toDataURL("image/png");
     }
-
+  
     async function startCapture() {
       capturedImages = [];
       clearSlots();
@@ -208,13 +227,13 @@
         document.getElementById(`slot${i+1}`).src = imgUrl;
       }
     }
-
+  
     function showCountdown(seconds) {
       return new Promise(resolve => {
         let counter = seconds;
         countdown.style.display = "block";
         countdown.textContent = counter;
-
+  
         let interval = setInterval(() => {
           counter--;
           if (counter > 0) {
@@ -227,79 +246,79 @@
         }, 1000);
       });
     }
-
+  
     function clearSlots() {
       for (let i = 1; i <= 4; i++) {
         document.getElementById(`slot${i}`).src = "";
       }
     }
-
+  
     function buildFinalStrip(callback) {
-  const stripWidth = 600;
-  const stripHeight = 1800;
-
-  fctx.fillStyle = "white";
-  fctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-
-  let frame = new Image();
-  frame.src = "2x6.png";
-
-  let stars = new Image();
-  stars.src = "stars.png";
-
-  frame.onload = () => {
-    stars.onload = () => {
-      let totalLoads = capturedImages.length * 2;
-      let loaded = 0;
-
-      for (let s = 0; s < 2; s++) {
-        let xOffset = s * stripWidth;
-        fctx.drawImage(frame, xOffset, 0, stripWidth, stripHeight);
-
-        capturedImages.forEach((src, i) => {
-          let img = new Image();
-          img.src = src;
-          img.onload = () => {
-            let photoW = 502;
-            let photoH = 351.5;
-            let spacing = 30;
-            let yOffset = 47 + i * (photoH + spacing);
-
-            fctx.drawImage(img, xOffset + 46, yOffset, photoW, photoH);
-
-            loaded++;
-            if (loaded === totalLoads) {
-              fctx.drawImage(stars, 0, 0, stripWidth, stripHeight);         
-              fctx.drawImage(stars, stripWidth, 0, stripWidth, stripHeight); 
-
-              fctx.fillStyle = "#888";
-              fctx.fillRect(stripWidth - 1, 0, 2, stripHeight);
-
-              callback();
-            }
-          };
-        });
-      }
-    };
-  };
-}
-
-
-function printStrip() {
-  buildFinalStrip(() => {
-    let dataUrl = finalCanvas.toDataURL("image/png");
-    let link = document.createElement("a");
-    link.download = "photobooth_strip.png";
-    link.href = dataUrl;
-    link.click();
-  });
-}
-
-
+      const stripWidth = 600;
+      const stripHeight = 1800;
+  
+      fctx.fillStyle = "white";
+      fctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+  
+      let frame = new Image();
+      frame.src = "2x6.png";
+  
+      let stars = new Image();
+      stars.src = "stars.png";
+  
+      frame.onload = () => {
+        stars.onload = () => {
+          let totalLoads = capturedImages.length * 2;
+          let loaded = 0;
+  
+          for (let s = 0; s < 2; s++) {
+            let xOffset = s * stripWidth;
+            fctx.drawImage(frame, xOffset, 0, stripWidth, stripHeight);
+  
+            capturedImages.forEach((src, i) => {
+              let img = new Image();
+              img.src = src;
+              img.onload = () => {
+                let photoW = 502; 
+                let photoH = 351.5;
+                let spacing = 30;
+                let yOffset = 47 + i * (photoH + spacing);
+  
+                
+                fctx.drawImage(img, xOffset + 46, yOffset, photoW, photoH);
+  
+                loaded++;
+                if (loaded === totalLoads) {
+                  fctx.drawImage(stars, 0, 0, stripWidth, stripHeight);         
+                  fctx.drawImage(stars, stripWidth, 0, stripWidth, stripHeight); 
+  
+                  fctx.fillStyle = "#888";
+                  fctx.fillRect(stripWidth - 1, 0, 2, stripHeight);
+  
+                  callback();
+                }
+              };
+            });
+          }
+        };
+      };
+    }
+  
+    function printStrip() {
+      buildFinalStrip(() => {
+        let dataUrl = finalCanvas.toDataURL("image/png");
+        let link = document.createElement("a");
+        link.download = "photobooth_strip.png";
+        link.href = dataUrl;
+        link.click();
+      });
+    }
+  
     function restartStrip() {
       capturedImages = [];
       clearSlots();
     }
   </script>
+  
 </body>
 </html>
