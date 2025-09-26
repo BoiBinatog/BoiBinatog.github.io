@@ -24,8 +24,8 @@
   }
 
   video, canvas {
-    width: 700px;
-    height: 500px;
+    width: auto;
+    height: 80vh;
     background: black;
     border-radius: 25px;
     object-fit: cover;
@@ -82,16 +82,16 @@
   .photos img {
     position: absolute;
     left: 18.8px;         
-    width: auto;       
+    width: 210px;       
     height: 132px;      
-    object-fit: cover;
+    object-fit: fill;
     border-radius: 2px;
     background: #111;
     z-index: 2;
   }
 
   #slot1 { top: 17px; }   
-  #slot2 { top: 159px; }
+  #slot2 { top: 159.7px; }
   #slot3 { top: 302px; }
   #slot4 { top: 444px; }
 
@@ -165,14 +165,33 @@
     let capturedImages = [];
 
    
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => video.srcObject = stream)
-      .catch(err => console.error("Camera error:", err));
+    // ✅ Force DSLR capture (3:2 ratio, ~6000x4000)
+    navigator.mediaDevices.getUserMedia({
+      video: {
+        width: { ideal: 6000 }, 
+        height: { ideal: 4000 },
+        aspectRatio: 3/2
+      }
+    })
+    .then(stream => {
+      video.srcObject = stream;
+      video.onloadedmetadata = () => {
+        console.log("DSLR Resolution:", video.videoWidth, "x", video.videoHeight);
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+      };
+    })
+    .catch(err => console.error("Camera error:", err));
 
     function takePhoto() {
       ctx.save();
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
+
+      const frameRatio = 3/2;
+      let srcX = 0, srcY = 0, srcW = video.videoWidth, srcH = video.videoHeight;
+      const videoRatio = video.videoWidth / video.videoHeight;
+
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       ctx.restore();
 
@@ -284,4 +303,3 @@ function printStrip() {
   </script>
 </body>
 </html>
-
