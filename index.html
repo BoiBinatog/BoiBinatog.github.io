@@ -24,8 +24,8 @@
   }
 
   video, canvas {
-    width: auto;
-    height: 80vh;
+    width: 700px;
+    height: 500px;
     background: black;
     border-radius: 25px;
     object-fit: cover;
@@ -82,9 +82,9 @@
   .photos img {
     position: absolute;
     left: 18.8px;         
-    width: 210px;       
+    width: 218px;       
     height: 132px;      
-    object-fit: cover;
+    object-fit: fill;
     border-radius: 2px;
     background: #111;
     z-index: 2;
@@ -181,64 +181,65 @@
     })
     .catch(err => console.error("Camera error:", err));
 
-    // ✅ helper to crop like object-fit: cover
-    function drawCover(ctx, img, dx, dy, dWidth, dHeight) {
-      const imgRatio = img.width / img.height;
-      const boxRatio = dWidth / dHeight;
+function drawImageCover(ctx, img, x, y, width, height) {
+  const imgAspect = img.width / img.height;
+  const boxAspect = width / height;
+  let renderWidth, renderHeight, offsetX, offsetY;
 
-      let sx, sy, sWidth, sHeight;
+  if (imgAspect > boxAspect) {
+    
+    renderHeight = height;
+    renderWidth = img.width * (height / img.height);
+    offsetX = x - (renderWidth - width) / 2;
+    offsetY = y;
+  } else {
+    
+    renderWidth = width;
+    renderHeight = img.height * (width / img.width);
+    offsetX = x;
+    offsetY = y - (renderHeight - height) / 2;
+  }
 
-      if (imgRatio > boxRatio) {
-        // wider → crop sides
-        sHeight = img.height;
-        sWidth = sHeight * boxRatio;
-        sx = (img.width - sWidth) / 2;
-        sy = 0;
-      } else {
-        // taller → crop top/bottom
-        sWidth = img.width;
-        sHeight = sWidth / boxRatio;
-        sx = 0;
-        sy = (img.height - sHeight) / 2;
-      }
+  ctx.drawImage(img, offsetX, offsetY, renderWidth, renderHeight);
+}
 
-      ctx.drawImage(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
-    }
   
-    function takePhoto() {
-      ctx.save();
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-  
-      // Crop logic same as cover
-      let frameW = canvas.width;
-      let frameH = canvas.height;
-      let frameRatio = frameW / frameH;
-  
-      let srcW = video.videoWidth;
-      let srcH = video.videoHeight;
-      let srcRatio = srcW / srcH;
-  
-      let sx, sy, sWidth, sHeight;
-  
-      if (srcRatio > frameRatio) {
-        sHeight = srcH;
-        sWidth = sHeight * frameRatio;
-        sx = (srcW - sWidth) / 2;
-        sy = 0;
-      } else {
-        sWidth = srcW;
-        sHeight = sWidth / frameRatio;
-        sx = 0;
-        sy = (srcH - sHeight) / 2;
-      }
-  
-      ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, frameW, frameH);
-      ctx.restore();
-  
-      return canvas.toDataURL("image/png");
-    }
-  
+function takePhoto() {
+  ctx.save();
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+
+  let frameW = canvas.width;
+  let frameH = canvas.height;
+  let frameRatio = frameW / frameH;
+
+  let srcW = video.videoWidth;
+  let srcH = video.videoHeight;
+  let srcRatio = srcW / srcH;
+
+  let sx, sy, sWidth, sHeight;
+
+  if (srcRatio > frameRatio) {
+    // DSLR is wider (3:2) → crop left/right
+    sHeight = srcH;
+    sWidth = sHeight * frameRatio;
+    sx = (srcW - sWidth) / 2;
+    sy = 0;
+  } else {
+    // Source is taller → crop top/bottom
+    sWidth = srcW;
+    sHeight = sWidth / frameRatio;
+    sx = 0;
+    sy = (srcH - sHeight) / 2;
+  }
+
+  // 🔑 Always fills the canvas — no black borders
+  ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, frameW, frameH);
+  ctx.restore();
+
+  return canvas.toDataURL("image/png");
+}
+
     async function startCapture() {
       capturedImages = [];
       clearSlots();
@@ -301,7 +302,7 @@
               let img = new Image();
               img.src = src;
               img.onload = () => {
-                let photoW = 502; 
+                let photoW = 530; 
                 let photoH = 351.5;
                 let spacing = 30;
                 let yOffset = 47 + i * (photoH + spacing);
