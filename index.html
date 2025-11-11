@@ -51,15 +51,6 @@
     width: 250px;   
     height: 600px;
   }
-  .stars {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 112%;
-    z-index: 3; 
-    pointer-events: none; 
-  }
 
   .strip-frame {
     position: absolute;
@@ -81,19 +72,19 @@
 
   .photos img {
     position: absolute;
-    left: 18.8px;         
-    width: 210px;       
-    height: 132px;      
+    left: 17.7px;         
+    width: 215px;       
+    height: 146px;      
     object-fit: cover;
     border-radius: 2px;
     background: #111;
+    overflow: hidden;
     z-index: 2;
   }
 
-  #slot1 { top: 17px; }   
-  #slot2 { top: 159.7px; }
-  #slot3 { top: 302px; }
-  #slot4 { top: 444px; }
+  #slot1 { top: 91.3px; }   
+  #slot2 { top: 243.7px; }
+  #slot3 { top: 396.2px; }
 
   .controls {
     margin-top: 1px;
@@ -134,14 +125,12 @@
     
     
     <div class="strip-container">
-      <img src="2x6.png" alt="Photo Frame" class="strip-frame"> 
+      <img src="3pcs.png" alt="Photo Frame" class="strip-frame"> 
       <div class="photos" id="photo-strip">
           <img id="slot1" alt="Photo 1">
           <img id="slot2" alt="Photo 2">
           <img id="slot3" alt="Photo 3">
-          <img id="slot4" alt="Photo 4">
         </div>
-        <img src="stars.png" alt="Stars" class="stars">
       </div>
   </div>
 
@@ -181,7 +170,6 @@
     })
     .catch(err => console.error("Camera error:", err));
 
-    // ✅ helper to crop like object-fit: cover
     function drawCover(ctx, img, dx, dy, dWidth, dHeight) {
       const imgRatio = img.width / img.height;
       const boxRatio = dWidth / dHeight;
@@ -242,7 +230,7 @@
     async function startCapture() {
       capturedImages = [];
       clearSlots();
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 3; i++) {
         await showCountdown(5); 
         let imgUrl = takePhoto();
         capturedImages.push(imgUrl);
@@ -270,7 +258,7 @@
     }
   
     function clearSlots() {
-      for (let i = 1; i <= 4; i++) {
+      for (let i = 1; i <= 3; i++) {
         document.getElementById(`slot${i}`).src = "";
       }
     }
@@ -283,13 +271,10 @@
       fctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
   
       let frame = new Image();
-      frame.src = "2x6.png";
-  
-      let stars = new Image();
-      stars.src = "stars.png";
+      frame.src = "3pcs.png";
+      
   
       frame.onload = () => {
-        stars.onload = () => {
           let totalLoads = capturedImages.length * 2;
           let loaded = 0;
   
@@ -301,19 +286,16 @@
               let img = new Image();
               img.src = src;
               img.onload = () => {
-                let photoW = 502; 
-                let photoH = 351.5;
-                let spacing = 30;
-                let yOffset = 47 + i * (photoH + spacing);
+                let photoW = 513.3; 
+                let photoH = 390.5;
+                let spacing = 18.5;
+                let yOffset = 244 + i * (photoH + spacing);
   
                 // ✅ use drawCover instead of drawImage
-                drawCover(fctx, img, xOffset + 46, yOffset, photoW, photoH);
+                drawCover(fctx, img, xOffset + 43.2, yOffset, photoW, photoH);
   
                 loaded++;
-                if (loaded === totalLoads) {
-                  fctx.drawImage(stars, 0, 0, stripWidth, stripHeight);         
-                  fctx.drawImage(stars, stripWidth, 0, stripWidth, stripHeight); 
-  
+                if (loaded === totalLoads) {  
                   fctx.fillStyle = "#888";
                   fctx.fillRect(stripWidth - 1, 0, 2, stripHeight);
   
@@ -324,7 +306,7 @@
           }
         };
       };
-    }
+    
   
     function printStrip() {
       buildFinalStrip(() => {
